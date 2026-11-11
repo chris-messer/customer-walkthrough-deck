@@ -1,0 +1,260 @@
+<!-- Position rail — drop-in for a single-file deck.
+     Paste the <style> block into the deck's stylesheet, the <nav> into the body
+     next to .progress, and the <script> into the deck's script. Then call
+     paintRail(index) from show().
+
+     Three levels read left to right on one line: sections in small caps, the
+     active section's subsections in sentence case, and the active subsection's
+     slides as pips. Everything else stays collapsed to its label. All three
+     levels are clickable. -->
+
+<nav class="rail" aria-label="Where you are in the deck"></nav>
+
+<style>
+/* NOTHING ABOUT THE ACTIVE SLIDE OR THE RAIL'S OWN OPEN STATE MAY MOVE THE BOX.
+   No rule may key top/left/right/height off a slide class, off which section is
+   open, or off which subsection is expanded. All four are declared once, here.
+
+   The origin is the LEFT edge and expansion grows rightward from it, so the
+   sections you have already walked past never move. --rail-w is the widest
+   expanded state, which makes the box constant and puts its right edge on the
+   slide's right margin. Right-anchoring instead would slide the origin left and
+   right as subsections open and close, which reads as jumping.
+
+   Measure --rail-w on the deck's widest expanded state and add headroom; then
+   check the origin clears the widest eyebrow, and move the breakpoint at the
+   bottom of this block to match. The rail costs the slide no vertical space. */
+.rail {
+  --rail-w: 1060px;
+  --rail-gutter: clamp(34px, 4.8vw, 88px);
+
+  position: fixed; z-index: 15;
+  top: clamp(24px, 3.2vw, 56px);
+  left: calc(100vw - var(--rail-gutter) - var(--rail-w));
+  right: var(--rail-gutter);
+  height: 34px; min-height: 34px; max-height: 34px;   /* locked three ways */
+  display: flex; align-items: center; justify-content: flex-start;
+  gap: 13px; overflow: hidden;
+}
+.rail.is-hidden { display: none; }
+
+/* ── level 1 · sections, always visible ─────────
+   Each label sits on a 2px track that fills as you move through it, so the
+   labels also read as a segmented spine: segments behind you full, the one you
+   are in part-full, the rest empty. */
+/* flex: none is load-bearing. Left to shrink, an over-wide rail would compress
+   the sections instead of clipping, which moves every label — the instability
+   the fixed origin exists to remove. Overflow is the safer failure. */
+.rail-sec { display: flex; align-items: center; gap: 9px; flex: none; }
+.rail-sname {
+  position: relative; appearance: none; background: none; cursor: pointer;
+  border: 0; border-radius: 2px; padding: 0 0 7px; white-space: nowrap; flex: none;
+  font: 700 9.5px/1 var(--display); letter-spacing: .13em; text-transform: uppercase;
+  color: var(--dim); transition: color .22s ease;
+}
+.rail-sname::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
+  background: rgba(27,49,57,.09); border-radius: 2px;
+}
+.rail-fill {
+  position: absolute; left: 0; bottom: 0; height: 2px; width: 0;
+  background: rgba(82,102,109,.5); border-radius: 2px; z-index: 1;
+  transition: width .3s ease, background .22s ease;
+}
+.rail-sec.is-past .rail-sname { color: var(--muted); }
+.rail-sec.is-open .rail-sname { color: var(--signal); }
+.rail-sec.is-open .rail-fill { background: var(--signal); }
+.rail-sname:hover { color: var(--ink); }
+.rail-sec.is-open .rail-sname:hover { color: var(--signal); }
+.rail-sname:focus-visible { outline: 2px solid rgba(34,114,180,.45); outline-offset: 3px; }
+
+/* ── level 2 · subsections of the open section ──
+   The chevron is what makes the nesting legible: everything after it belongs to
+   the section label before it, rather than reading as another section. */
+.rail-subs { display: none; }
+.rail-sec.is-open .rail-subs { display: flex; align-items: center; gap: 8px; flex: none; }
+.rail-sec.is-open .rail-subs::before {
+  content: "\203a"; flex: none; margin-right: -1px;
+  font: 400 13px/1 var(--display); color: rgba(255,54,33,.55);
+}
+.rail-sub {
+  display: flex; align-items: center; gap: 6px; flex: none;
+  padding: 3px 0; border: 1px solid transparent; border-radius: 999px;
+  transition: background .22s ease, border-color .22s ease;
+}
+/* the open subsection and its pips share one pill, so the pips are
+   unambiguously its contents and not loose punctuation */
+.rail-sub.is-open {
+  background: rgba(255,255,255,.75); border-color: var(--line);
+  padding: 3px 7px 3px 10px;
+}
+.rail-uname {
+  appearance: none; border: 0; background: none; cursor: pointer; flex: none;
+  padding: 0; white-space: nowrap; border-radius: 2px;
+  font: 500 11.5px/1 var(--body); color: var(--dim); transition: color .22s ease;
+}
+.rail-sub.is-past .rail-uname { color: var(--muted); }
+.rail-sub.is-open .rail-uname { color: var(--ink); font-weight: 600; }
+.rail-uname:hover { color: var(--ink); }
+.rail-uname:focus-visible { outline: 2px solid rgba(34,114,180,.45); outline-offset: 3px; }
+
+/* ── level 3 · slides of the open subsection ──── */
+.rail-pips { display: none; }
+.rail-sub.is-open .rail-pips { display: flex; align-items: center; }
+.rail-pip {
+  appearance: none; border: 0; background: none; cursor: pointer;
+  /* a generous hit area around a small dot: it has to stay quiet but still be
+     comfortable to click mid-presentation */
+  width: 12px; height: 18px; padding: 0; border-radius: 4px;
+  display: grid; place-items: center;
+}
+.rail-pip i {
+  width: 5px; height: 5px; border-radius: 50%; background: rgba(27,49,57,.22);
+  transition: background .22s ease, box-shadow .22s ease;
+}
+.rail-pip.is-past i { background: rgba(82,102,109,.62); }
+.rail-pip.is-here i { background: var(--signal); box-shadow: 0 0 0 3px rgba(255,54,33,.18); }
+.rail-pip:hover i { background: var(--ink); }
+.rail-pip.is-here:hover i { background: var(--signal); }
+.rail-pip:focus-visible { outline: 2px solid rgba(34,114,180,.45); outline-offset: 0; }
+
+/* ── optional appendix ──────────────────────────
+   buildRail marks a section named "Appendix"; a normal final chapter keeps the
+   standard track. The appendix sits after the close, so it gets a quieter,
+   compact label and does not read as another chapter of the argument. */
+.rail-sec.is-appendix .rail-sname { padding-bottom: 0; font-size: 8.5px; letter-spacing: .1em; }
+.rail-sec.is-appendix .rail-sname::after,
+.rail-sec.is-appendix .rail-fill { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rail-sname, .rail-uname, .rail-fill, .rail-pip i { transition: none; }
+}
+
+/* Below this a full-width box would put the origin back into the eyebrow, so
+   the rail drops its two inner levels and keeps only the section spine. That
+   spine is the same width on every slide, so there is nothing left to reflow
+   and the rail can hang off the right margin again — the fixed origin is only
+   needed while something expands. This threshold tracks --rail-w. */
+@media (max-width: 1480px) {
+  .rail { left: auto; justify-content: flex-end; gap: 10px; }
+  .rail-sec.is-open .rail-subs { display: none; }
+}
+@media (max-width: 860px) { .rail { display: none; } }
+</style>
+
+<script>
+/* ── the map ─────────────────────────────────────────────────────────────
+   The only place the hierarchy is written down. Nothing about it belongs in
+   per-slide markup — hand-maintained navigation rots on the first reorder.
+   Slide numbers are 0-based indices into the deck's .slide list. Keep this
+   declaration beside the deck constants so it is easy to find and review.
+
+   Subsection names should be one or two words: the rail is a horizontal band
+   with finite width, and short names let it carry the organizing division as a
+   visible label. */
+const OUTLINE = [
+  ['Overview',   [['Opening',    [0, 1]],
+                  ['Framing',    [2, 3, 4]]]],
+  ['Options',    [['What it is', [5]],
+                  ['Build',      [6, 7]],
+                  ['Retrieve',   [8, 9]]]],
+  ['Next steps', [['Where you land', [10]],
+                  ['Discussion',     [11, 12]]]],
+];
+
+const rail = document.querySelector('.rail');
+
+/* ── build it once ──────────────────────────────────────────────────────
+   Fails loudly rather than drawing a rail that lies: every slide must appear
+   exactly once, and each subsection must be a contiguous run — otherwise the
+   pips would show slides that are not neighbours. */
+(function buildRail() {
+  const seen = new Set();
+  const order = [];
+  const failures = [];
+  let html = '';
+
+  for (const [section, subs] of OUTLINE) {
+    if (!subs.length) failures.push(`section "${section}" has no subsections`);
+    const all = subs.flatMap(([, idx]) => idx);
+    for (const i of all) {
+      if (seen.has(i)) failures.push(`slide ${i} is listed twice`);
+      if (!slides[i]) failures.push(`slide ${i} does not exist`);
+      seen.add(i); order.push(i);
+    }
+    const appendix = /^appendix$/i.test(section) ? ' is-appendix' : '';
+    html += `<div class="rail-sec${appendix}" data-from="${all[0]}" data-to="${all[all.length - 1]}">`
+      + `<button type="button" class="rail-sname" data-slide="${all[0]}">`
+      + `${section}<i class="rail-fill"></i></button><div class="rail-subs">`;
+    for (const [sub, idx] of subs) {
+      if (!idx.length) failures.push(`subsection "${section} / ${sub}" has no slides`);
+      const contiguous = idx.every((n, k) => k === 0 || n === idx[k - 1] + 1);
+      if (!contiguous) failures.push(`subsection "${section} / ${sub}" is not contiguous`);
+      html += `<div class="rail-sub" data-from="${idx[0]}" data-to="${idx[idx.length - 1]}">`
+        + `<button type="button" class="rail-uname" data-slide="${idx[0]}">${sub}</button>`
+        + `<div class="rail-pips">`
+        + idx.map(i => {
+            const label = slides[i]?.querySelector('h1, h2')?.textContent.trim() || sub;
+            return `<button type="button" class="rail-pip" data-slide="${i}"`
+              + ` title="${String(i + 1).padStart(2, '0')} · ${label}"`
+              + ` aria-label="Slide ${i + 1} of ${slides.length}: ${label}"><i></i></button>`;
+          }).join('')
+        + `</div></div>`;
+    }
+    html += `</div></div>`;
+  }
+
+  slides.forEach((_, i) => { if (!seen.has(i)) failures.push(`slide ${i} is not in OUTLINE`); });
+  if (order.some((n, k) => k && n !== order[k - 1] + 1)) failures.push('OUTLINE is not in deck order');
+  if (failures.length) {
+    const message = `rail: invalid OUTLINE\n- ${failures.join('\n- ')}`;
+    console.error(message);
+    throw new Error(message);
+  }
+
+  rail.innerHTML = html;
+})();
+
+/* ── paint it per slide ─────────────────────────────────────────────────
+   Call from show(). The only thing the rail reacts to about the active slide
+   is whether it carries an eyebrow — title and close slides are bare, so the
+   rail follows the eyebrow rather than being listed slide by slide. Its
+   position is pinned in CSS and must never be derived from the slide. */
+function paintRail(index) {
+  rail.classList.toggle('is-hidden', !slides[index]?.querySelector('.eyebrow'));
+
+  const mark = (el) => {
+    const from = Number(el.dataset.from), to = Number(el.dataset.to);
+    const open = index >= from && index <= to;
+    el.classList.toggle('is-open', open);
+    el.classList.toggle('is-past', index > to);
+    return { from, to, open };
+  };
+
+  rail.querySelectorAll('.rail-sec').forEach(sec => {
+    const { from, to, open } = mark(sec);
+    const done = open ? (index - from + 1) / (to - from + 1) : index > to ? 1 : 0;
+    sec.querySelector('.rail-fill').style.width = `${done * 100}%`;
+    sec.querySelector('.rail-sname').setAttribute('aria-current', open ? 'step' : 'false');
+  });
+  rail.querySelectorAll('.rail-sub').forEach(sub => {
+    const { open } = mark(sub);
+    sub.querySelector('.rail-uname').setAttribute('aria-current', open ? 'step' : 'false');
+  });
+  rail.querySelectorAll('.rail-pip').forEach(pip => {
+    const n = Number(pip.dataset.slide);
+    pip.classList.toggle('is-here', n === index);
+    pip.classList.toggle('is-past', n < index);
+    pip.setAttribute('aria-current', n === index ? 'true' : 'false');
+  });
+}
+
+/* Jumping from the rail. Blur afterwards, or the button swallows the next
+   Space — Space is one of the deck's step keys. */
+rail.addEventListener('click', (event) => {
+  const target = event.target.closest('[data-slide]');
+  if (!target) return;
+  setTimeout(() => target.blur(), 0);
+  show(Number(target.dataset.slide));
+});
+</script>

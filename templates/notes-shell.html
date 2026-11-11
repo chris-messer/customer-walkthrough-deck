@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title><!-- DECK_TITLE --> — Speaker notes</title>
+  <style>
+    :root {
+      --ink: #1b3139;
+      --muted: #52666d;
+      --dim: #75868b;
+      --oat: #f9f7f4;
+      --oat-2: #eeede9;
+      --line: #d7d6d1;
+      --signal: #ff3621;
+      --blue: #2272b4;
+      --display: "DM Sans", "Avenir Next", "Inter", sans-serif;
+      --body: "Inter", "DM Sans", "Avenir Next", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--oat); color: var(--ink); font-family: var(--body); }
+    body {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      background:
+        radial-gradient(circle at 92% 0%, rgba(255,54,33,.07), transparent 34%),
+        linear-gradient(160deg, #f9f7f4 0%, #f5f3ef 60%, #eeede9 100%);
+    }
+    header {
+      padding: 18px 22px 14px;
+      border-bottom: 1px solid var(--line);
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+    }
+    .head-right { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; flex: none; }
+    .brand { color: var(--signal); font: 700 11px/1 var(--display); letter-spacing: .16em; text-transform: uppercase; }
+    .counter { font: 700 13px/1 var(--display); color: var(--dim); font-variant-numeric: tabular-nums; }
+    h1 { margin: 10px 0 0; font: 700 26px/1.1 var(--display); letter-spacing: -.02em; }
+    .section-tag {
+      display: inline-block; margin-top: 8px; font: 700 10px/1 var(--display);
+      letter-spacing: .14em; text-transform: uppercase; color: var(--blue);
+      border: 1px solid rgba(34,114,180,.3); background: rgba(34,114,180,.07);
+      padding: 5px 8px; border-radius: 999px;
+    }
+    .section-tag i { font-style: normal; opacity: .55; margin: 0 6px; }
+    .on-screen {
+      margin-top: 10px; color: var(--muted); font-size: 13px; line-height: 1.4;
+      padding: 10px 12px; background: rgba(255,255,255,.7); border-left: 3px solid var(--signal);
+    }
+    .seg {
+      display: inline-flex; background: rgba(255,255,255,.85); border: 1px solid var(--line);
+      border-radius: 999px; padding: 3px; gap: 2px;
+    }
+    .seg button {
+      border: 0; background: transparent; color: var(--dim); border-radius: 999px;
+      font: 700 11px/1 var(--display); letter-spacing: .08em; text-transform: uppercase;
+      padding: 8px 13px; cursor: pointer; white-space: nowrap;
+    }
+    .seg button:hover { color: var(--signal); }
+    .seg button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+    .seg button[aria-pressed="true"]:hover { color: #fff; }
+    /* Dual-track layout: one transition node repositions via order (see speaker-notes-cadence.md) */
+    main { overflow: auto; padding: 18px 22px 24px; display: flex; flex-direction: column; }
+    .cues { order: 1; }
+    .transition { order: 2; }
+    .say { order: 3; }
+    #bullets { order: 4; }
+    .cues {
+      background: rgba(255,255,255,.94); border: 1px solid var(--line); border-left: 3px solid var(--blue);
+      border-radius: 10px; padding: 18px 20px 12px; margin-bottom: 16px;
+    }
+    .cues .label { display: block; color: var(--blue); font: 700 11px/1 var(--display); letter-spacing: .12em; text-transform: uppercase; margin-bottom: 12px; }
+    .cue-group { margin-bottom: 16px; }
+    .cue-group:last-child { margin-bottom: 6px; }
+    .cue-group h3 { margin: 0 0 6px; font: 700 14px/1.25 var(--display); letter-spacing: -.01em; color: var(--ink); }
+    .cue-group ul { margin: 0; padding-left: 20px; }
+    .cue-group li { margin-bottom: 7px; font-size: 16px; line-height: 1.45; color: var(--ink); }
+    .cue-group li::marker { color: var(--blue); }
+    .say {
+      font-size: 15px; line-height: 1.6; color: var(--muted);
+      background: rgba(255,255,255,.68); border: 1px solid var(--line); border-radius: 10px;
+      padding: 16px 18px; margin-bottom: 16px;
+    }
+    .say .label { display: block; color: var(--signal); font: 700 11px/1 var(--display); letter-spacing: .12em; text-transform: uppercase; margin-bottom: 10px; }
+    body[data-mode="cues"] .say,
+    body[data-mode="cues"] #bullets { display: none; }
+    body[data-mode="full"] .cues { display: none; }
+    body[data-mode="full"] .say { order: 1; font-size: 16px; color: var(--ink); background: rgba(255,255,255,.82); }
+    .block { margin-bottom: 14px; }
+    .block h2 { margin: 0 0 8px; font: 700 12px/1 var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--blue); }
+    .block ul { margin: 0; padding-left: 18px; color: var(--muted); font-size: 14px; line-height: 1.45; }
+    .block li { margin-bottom: 4px; }
+    .transition {
+      margin-bottom: 16px; padding: 12px 14px; border-left: 3px solid var(--blue);
+      background: rgba(34,114,180,.07); color: var(--ink); font-size: 14px; line-height: 1.4;
+    }
+    footer {
+      border-top: 1px solid var(--line); padding: 12px 16px;
+      display: flex; gap: 10px; align-items: center; justify-content: space-between;
+      background: rgba(255,255,255,.75);
+    }
+    .nav { display: flex; gap: 8px; }
+    button {
+      appearance: none; border: 1px solid var(--line); background: white; color: var(--ink);
+      font: 700 12px/1 var(--display); letter-spacing: .06em; text-transform: uppercase;
+      padding: 11px 14px; border-radius: 8px; cursor: pointer;
+    }
+    button:hover { border-color: var(--signal); color: var(--signal); }
+    .hint { color: var(--dim); font-size: 11px; letter-spacing: .04em; }
+    .deck-link { color: var(--blue); font-size: 12px; text-decoration: none; }
+    .deck-link:hover { color: var(--signal); }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <div class="brand"><!-- Deck name --> · Talk track</div>
+      <h1 id="title">Title</h1>
+      <div id="section"></div>
+      <div class="on-screen" id="onscreen"></div>
+    </div>
+    <div class="head-right">
+      <div class="counter" id="counter">01 / NN</div>
+      <div class="seg" id="mode-toggle" role="group" aria-label="Notes view mode">
+        <button type="button" data-mode="both" aria-pressed="true">Both</button>
+        <button type="button" data-mode="cues" aria-pressed="false">Cues</button>
+        <button type="button" data-mode="full" aria-pressed="false">Full script</button>
+      </div>
+    </div>
+  </header>
+  <main>
+    <div class="cues"><span class="label">Live cues</span><div id="cues"></div></div>
+    <div class="say"><span class="label">Full script</span><div id="say"></div></div>
+    <div id="bullets"></div>
+    <div class="transition" id="transition"></div>
+  </main>
+  <footer>
+    <div class="nav">
+      <button type="button" id="prev">← Prev</button>
+      <button type="button" id="next">Next →</button>
+    </div>
+    <a class="deck-link" id="deck-link" href="{slug}-walkthrough.html" target="{slug}-main">Open main deck</a>
+    <span class="hint">Synced · ← → · Space · M switches view</span>
+  </footer>
+
+  <script>
+    (() => {
+      // Must match deck-shell CHANNEL / STORAGE_KEY / slide count
+      const CHANNEL = '{slug}-deck';
+      const STORAGE_KEY = '{slug}-slide';
+      const MODE_KEY = '{slug}-notes-mode';
+      const MODES = ['both', 'cues', 'full'];
+      // Must match the deck's single OUTLINE declaration exactly.
+      const OUTLINE = [
+        ['Overview', [['Opening', [0, 1]]]],
+        // Add sections/subsections in deck order. Keep names to one or two words.
+      ];
+      const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(CHANNEL) : null;
+      let index = 0;
+      let applyingRemote = false;
+      let lastNavAt = 0;
+      let mode = 'both';
+
+      // One object per deck slide, same order. Fill cues + say before presenting.
+      const NOTES = [
+        {
+          title: 'Title',
+          onscreen: 'Title slide — one-line reminder of what is on screen.',
+          say: 'Open with who you are, why this walkthrough, and what the room will leave with.',
+          cues: [
+            ['Open', [
+              'Who you are / why this deck',
+              'What the room will leave with',
+            ]],
+          ],
+          bullets: [
+            ['Purpose', ['Frame the walkthrough and set expectations.']],
+            ['Frame', ['Audience / problem framing', 'What this walkthrough proves']],
+          ],
+          transition: 'Transition: “Start with the problem.”'
+        },
+        {
+          title: 'Agenda',
+          onscreen: 'Agenda beats visible on slide.',
+          say: 'Short agenda — don’t read the cards. Promise the live proof early.',
+          cues: [
+            ['Keep it crisp', [
+              'Don’t read every card',
+              'Promise the live proof early',
+            ]],
+          ],
+          bullets: [
+            ['Purpose', ['Set expectations for demo / cost if present.']],
+          ],
+          transition: 'Transition: “First — why this keeps hurting.”'
+        }
+        // Add one entry per deck slide. NOTES.length must equal deck slide count.
+      ];
+
+      function outlineCrumbs() {
+        const crumbs = Array(NOTES.length), seen = new Set(), order = [], failures = [];
+        for (const [section, subs] of OUTLINE) {
+          for (const [sub, indices] of subs) {
+            if (!indices.length) failures.push(`subsection "${section} / ${sub}" has no slides`);
+            if (!indices.every((n, k) => !k || n === indices[k - 1] + 1)) failures.push(`subsection "${section} / ${sub}" is not contiguous`);
+            for (const i of indices) {
+              if (seen.has(i)) failures.push(`slide ${i} is listed twice`);
+              if (!NOTES[i]) failures.push(`slide ${i} does not exist`);
+              seen.add(i); order.push(i); crumbs[i] = [section, sub];
+            }
+          }
+        }
+        NOTES.forEach((_, i) => { if (!seen.has(i)) failures.push(`slide ${i} is not in OUTLINE`); });
+        if (order.some((n, k) => k && n !== order[k - 1] + 1)) failures.push('OUTLINE is not in notes order');
+        if (failures.length) {
+          const message = `notes: invalid OUTLINE\n- ${failures.join('\n- ')}`;
+          console.error(message);
+          throw new Error(message);
+        }
+        return crumbs;
+      }
+      const CRUMBS = outlineCrumbs();
+
+      const els = {
+        title: document.getElementById('title'),
+        section: document.getElementById('section'),
+        counter: document.getElementById('counter'),
+        onscreen: document.getElementById('onscreen'),
+        cues: document.getElementById('cues'),
+        say: document.getElementById('say'),
+        bullets: document.getElementById('bullets'),
+        transition: document.getElementById('transition'),
+        modeToggle: document.getElementById('mode-toggle'),
+      };
+
+      function applyMode(next, opts = {}) {
+        mode = MODES.includes(next) ? next : 'both';
+        document.body.dataset.mode = mode;
+        els.modeToggle.querySelectorAll('button').forEach((btn) => {
+          btn.setAttribute('aria-pressed', String(btn.dataset.mode === mode));
+        });
+        if (!opts.silent) {
+          try { localStorage.setItem(MODE_KEY, mode); } catch (_) {}
+        }
+      }
+
+      function broadcastSlide(i) {
+        try { localStorage.setItem(STORAGE_KEY, String(i)); } catch (_) {}
+        if (bc) bc.postMessage({ slideIndex: i, source: 'notes' });
+      }
+
+      function render() {
+        const note = NOTES[index];
+        const n = String(index + 1).padStart(2, '0');
+        const total = String(NOTES.length).padStart(2, '0');
+        els.title.textContent = note.title;
+        els.counter.textContent = `${n} / ${total}`;
+        const [section, sub] = CRUMBS[index] || [];
+        els.section.innerHTML = section ? `<span class="section-tag">${section}<i>›</i>${sub}</span>` : '';
+        els.onscreen.textContent = note.onscreen;
+        els.say.textContent = note.say;
+        els.transition.textContent = note.transition;
+        els.cues.innerHTML = (note.cues || []).map(([heading, items]) => `
+          <div class="cue-group">
+            <h3>${heading}</h3>
+            <ul>${items.map(item => `<li>${item}</li>`).join('')}</ul>
+          </div>
+        `).join('');
+        els.bullets.innerHTML = (note.bullets || []).map(([heading, items]) => `
+          <div class="block">
+            <h2>${heading}</h2>
+            <ul>${items.map(item => `<li>${item}</li>`).join('')}</ul>
+          </div>
+        `).join('');
+        document.title = `Notes ${n} — ${note.title}`;
+      }
+
+      function show(next, opts = {}) {
+        index = Math.max(0, Math.min(NOTES.length - 1, next));
+        render();
+        document.querySelector('main').scrollTop = 0;
+        history.replaceState(null, '', `#${index + 1}`);
+        if (!opts.silent && !applyingRemote) broadcastSlide(index);
+      }
+
+      function applyRemote(i) {
+        if (!Number.isFinite(i) || i === index) return;
+        applyingRemote = true;
+        show(i, { silent: true });
+        applyingRemote = false;
+      }
+
+      if (bc) {
+        bc.onmessage = (event) => {
+          const i = event?.data?.slideIndex;
+          if (typeof i === 'number') applyRemote(i);
+        };
+      }
+      window.addEventListener('storage', (event) => {
+        if (event.newValue == null) return;
+        if (event.key === MODE_KEY) { applyMode(event.newValue, { silent: true }); return; }
+        if (event.key !== STORAGE_KEY) return;
+        applyRemote(Number(event.newValue));
+      });
+
+      els.modeToggle.addEventListener('click', (event) => {
+        const btn = event.target.closest('button[data-mode]');
+        if (btn) applyMode(btn.dataset.mode);
+      });
+
+      document.getElementById('prev').addEventListener('click', () => show(index - 1));
+      document.getElementById('next').addEventListener('click', () => show(index + 1));
+
+      document.addEventListener('keydown', (event) => {
+        if (['ArrowRight', 'PageDown', ' ', 'ArrowLeft', 'PageUp', 'Home', 'End'].includes(event.key)) {
+          event.preventDefault();
+        }
+      });
+      document.addEventListener('keyup', (event) => {
+        const isStepKey = ['ArrowRight', 'PageDown', ' ', 'ArrowLeft', 'PageUp'].includes(event.key);
+        const now = Date.now();
+        if (isStepKey && (event.repeat || now - lastNavAt < 180)) return;
+        if (isStepKey) lastNavAt = now;
+        if (['ArrowRight', 'PageDown', ' '].includes(event.key)) show(index + 1);
+        else if (['ArrowLeft', 'PageUp'].includes(event.key)) show(index - 1);
+        else if (event.key === 'Home') show(0);
+        else if (event.key === 'End') show(NOTES.length - 1);
+        else if (event.key === 'm' || event.key === 'M') {
+          applyMode(MODES[(MODES.indexOf(mode) + 1) % MODES.length]);
+        }
+      });
+
+      let savedMode = null;
+      try { savedMode = localStorage.getItem(MODE_KEY); } catch (_) {}
+      applyMode(savedMode || 'both', { silent: true });
+
+      let start = Number(location.hash.slice(1)) - 1;
+      if (!Number.isFinite(start) || start < 0) {
+        try { start = Number(localStorage.getItem(STORAGE_KEY)); } catch (_) { start = 0; }
+      }
+      show(Number.isFinite(start) && start >= 0 ? start : 0, { silent: true });
+      broadcastSlide(index);
+    })();
+  </script>
+</body>
+</html>
